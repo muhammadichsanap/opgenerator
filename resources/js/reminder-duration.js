@@ -1,5 +1,6 @@
 function updateDuration() {
     const durasiColumns = document.querySelectorAll('.durasi-column');
+    const alarmSound = new Audio('https://www.myinstants.com/sounds/galaxy-brain-meme-2099.mp3'); // Ganti dengan URL MP3 yang benar
     durasiColumns.forEach(column => {
         const startTime = new Date(column.dataset.startTime);
         const endTime = new Date(column.dataset.endTime);
@@ -10,6 +11,8 @@ function updateDuration() {
         if (now > endTime) {
             // Jika waktu sudah lewat, tampilkan 00:00:00
             duration = 0;
+            column.textContent = "00:00:00";
+            alarmSound.play(); // Putar nada alarm
         } else if (now < startTime) {
             // Jika belum dimulai, tampilkan durasi penuh
             duration = (endTime - startTime) / 1000;
