@@ -13,7 +13,6 @@ use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Carbon\Carbon;
-use Carbon\Exceptions\InvalidFormatException;
 
 class ReminderResource extends Resource
 {
@@ -45,18 +44,17 @@ class ReminderResource extends Resource
 
                 TextInput::make('no_pc')
                     ->label('Nomor PC')
-                    ->numeric()
                     ->required(),
 
                 Select::make('paket')
                     ->label('Paket')
                     ->options([
-                        'paket1' => 'Paket 1 - Rp10.000', // Menampilkan harga untuk Paket 1
-                        'paket2' => 'Paket 2 - Rp20.000', // Menampilkan harga untuk Paket 2
-                        'paket3' => 'Paket 3 - Rp30.000', // Menampilkan harga untuk Paket 3
-                        'paket4' => 'Paket 4 - Rp35.000', // Menampilkan harga untuk Paket 4
-                        'paket5' => 'Paket 5 - Rp40.000', // Menampilkan harga untuk Paket 5
-                        'paket6' => 'Paket 6 - Rp55.000', // Menampilkan harga untuk Paket 6
+                        'paket1' => 'Paket 1 - Rp10.000',
+                        'paket2' => 'Paket 2 - Rp20.000',
+                        'paket3' => 'Paket 3 - Rp30.000',
+                        'paket4' => 'Paket 4 - Rp35.000',
+                        'paket5' => 'Paket 5 - Rp40.000',
+                        'paket6' => 'Paket 6 - Rp55.000',
                         'paket0' => 'Paket 0 - Rp2.000',
                     ])
                     ->required()
@@ -74,18 +72,35 @@ class ReminderResource extends Resource
 
                 Select::make('tambahan')
                     ->label('Tambahan')
-                    ->options([
-                        'Minola' => 'Minola - Rp2.000',
-                        'Golda/Milku/Abc' => 'Golda etc - Rp3.500',
-                        'Teh Pucuk' => 'Teh Pucuk - Rp4.000',
-                    ]),
+                    ->options(self::getTambahanOptions()), // Menggunakan fungsi untuk mendapatkan opsi tambahan
+
                 TextInput::make('belum_bayar')
                     ->label('Belum Bayar')
                     ->numeric(),
+
                 TextInput::make('dompet_digital')
                     ->label('Dompet Digital')
                     ->numeric()
             ]);
+    }
+
+    protected static function getTambahanOptions(): array
+    {
+        $basePrices = [
+            'Minola' => 2000,
+            'Golda/Milku/Abc' => 3500,
+            'TehPucuk' => 4000,
+        ];
+
+        $options = [];
+        for ($i = 1; $i <= 3; $i++) { // Menghitung untuk 1 hingga 3 item
+            foreach ($basePrices as $item => $price) {
+                $totalPrice = $price * $i; // Menghitung total harga
+                $options["{$item} {$i}"] = "{$item} {$i} - Rp{$totalPrice}"; // Format: 'Minola 3 - Rp6000'
+            }
+        }
+
+        return $options;
     }
 
     protected static function getDurationFromPackage($packageId): string
@@ -122,9 +137,9 @@ class ReminderResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('no_pc')->label('Nomor PC'),
-                TextColumn::make('paket')->label('Paket'),
                 TextColumn::make('kelas_pc')->label('Kelas PC'),
+                TextColumn::make('paket')->label('Paket'),
+                TextColumn::make('no_pc')->label('Nomor PC'),
                 TextColumn::make('waktu_mulai')->label('Waktu Mulai')->sortable(),
                 TextColumn::make('waktu_selesai')->label('Waktu Selesai')->sortable(),
                 TextColumn::make('durasi')
@@ -141,7 +156,7 @@ class ReminderResource extends Resource
                 TextColumn::make('harga')->label('Harga'), // Tambahkan kolom harga
                 TextColumn::make('tambahan')->label('Tambahan'), 
                 TextColumn::make('belum_bayar')->label('Belum Bayar'), // Tambahkan kolom belum bayar
-                TextColumn::make('dompet digital')->label('Dompet Digital'), // Tambahkan kolom dompet digital
+                TextColumn::make('dompet_digital')->label('Dompet Digital'), // Tambahkan kolom dompet digital
                 TextColumn::make('total')->label('Total'), // Tambahkan kolom total
             ])
             ->filters([
@@ -166,11 +181,26 @@ class ReminderResource extends Resource
             $reminder->durasi = self::$durations[$reminder->paket] ?? '0:00';
             $reminder->harga = self::$prices[$reminder->paket] ?? 0; // Mengatur harga berdasarkan paket
             
-            // Logika untuk menghitung total
-            $reminder->total = $reminder->harga + $reminder->harga_tambahan - $reminder->belum_bayar; // Total = harga + harga_tambahan - belum_bayar
-            // Jika ingin menggunakan dompet digital, uncomment baris berikut
-            // $reminder->total = $reminder->harga + $reminder->harga_tambahan - $reminder->{'dompet digital'};
+            // Menghitung harga tambahan berdasarkan pilihan
+            $tambahan = explode(' ', $reminder->tambahan); // Memisahkan nama tambahan dan jumlah
+            $tambahanName = $tambahan[0]; // Nama tambahan
+            $tambahanQuantity = isset($tambahan[1]) ? (int)$tambahan[1] : 1; // Jumlah tambahan, default 1
+
+            // Menghitung harga tambahan
+            $hargaTambahan = self::getPriceFromTambahan($tambahanName, $tambahanQuantity);
+            $reminder->total = $reminder->harga + $hargaTambahan - $reminder->belum_bayar; // Total = harga + harga_tambahan - belum_bayar
         });
+    }
+
+    protected static function getPriceFromTambahan($tambahanName, $quantity): int
+    {
+        $tambahanPrices = [
+            'Minola' => 2000, // Rp2.000
+            'Golda/Milku/Abc' => 3500, // Rp3.500
+            'TehPucuk' => 4000, // Rp4.000
+        ];
+
+        return ($tambahanPrices[$tambahanName] ?? 0) * $quantity; // Menghitung total harga tambahan
     }
 
     public static function getRelations(): array
