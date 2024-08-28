@@ -59,6 +59,8 @@ class ReminderResource extends Resource
                         'paket8' => 'Paket 8 - Rp3.000',
                         'paket9' => 'Paket 9 - Rp5.000',
                         'paket0' => 'Paket 0 - Rp2.000',
+                        'vip20k' => 'Vip 3h - Rp20.000',
+                        'vip30k' => 'Vip 6h - Rp30.000',
                     ])
                     ->required()
                     ->reactive()
@@ -118,6 +120,8 @@ class ReminderResource extends Resource
             'paket8' => '00:35',
             'paket9' => '01:00',
             'paket0' => '00:02',
+            'vip20k' => '3:00',
+            'vip30k' => '6:00,'
         ];
 
         return $durations[$packageId] ?? '0:00';
@@ -135,6 +139,8 @@ class ReminderResource extends Resource
             'paket8' => 3000,
             'paket9' => 5000,
             'paket0' => 2000, 
+            'vip20k' => 20000,
+            'vip30k' => 30000,
         ];
 
         return $prices[$packageId] ?? 0;

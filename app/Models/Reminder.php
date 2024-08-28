@@ -34,26 +34,30 @@ class Reminder extends Model
 
     protected static $durations = [
         'paket1' => '2:20',
-        'paket2' => '3:00',
-        'paket3' => '4:00',
-        'paket4' => '5:40',
-        'paket5' => '7:10',
-        'paket6' => '9:00',
-        'paket8' => '00:35',
-        'paket9' => '01:00',
-        'paket0' => '00:02',
+            'paket2' => '3:00',
+            'paket3' => '4:00',
+            'paket4' => '5:40',
+            'paket5' => '7:10',
+            'paket6' => '9:00',
+            'paket8' => '00:35',
+            'paket9' => '01:00',
+            'paket0' => '00:02',
+            'vip20k' => '3:00',
+            'vip30k' => '6:00,'
     ];
 
     protected static $prices = [
         'paket1' => 10000, // Harga untuk paket 1
-        'paket2' => 12000, // Harga untuk paket 2
-        'paket3' => 15000, // Harga untuk paket 3
-        'paket4' => 20000, // Harga untuk paket 4
-        'paket5' => 25000, // Harga untuk paket 5
-        'paket6' => 30000,
-        'paket8' => 3000,
-        'paket9' => 5000,
-        'paket0' => 2000,  // Harga untuk paket 0
+            'paket2' => 12000, // Harga untuk paket 2
+            'paket3' => 15000, // Harga untuk paket 3
+            'paket4' => 20000, // Harga untuk paket 4
+            'paket5' => 25000, // Harga untuk paket 5
+            'paket6' => 30000,
+            'paket8' => 3000,
+            'paket9' => 5000,
+            'paket0' => 2000, 
+            'vip20k' => 20000,
+            'vip30k' => 30000, // Harga untuk paket 0
     ];
 
     protected static function booted()
