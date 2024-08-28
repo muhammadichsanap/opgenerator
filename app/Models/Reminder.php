@@ -36,19 +36,23 @@ class Reminder extends Model
         'paket1' => '2:20',
         'paket2' => '3:00',
         'paket3' => '4:00',
-        'paket4' => '7:10',
-        'paket5' => '8:00',
-        'paket6' => '10:00',
+        'paket4' => '5:40',
+        'paket5' => '7:10',
+        'paket6' => '9:00',
+        'paket8' => '00:35',
+        'paket9' => '01:00',
         'paket0' => '00:02',
     ];
 
     protected static $prices = [
         'paket1' => 10000, // Harga untuk paket 1
-        'paket2' => 20000, // Harga untuk paket 2
-        'paket3' => 30000, // Harga untuk paket 3
-        'paket4' => 35000, // Harga untuk paket 4
-        'paket5' => 40000, // Harga untuk paket 5
-        'paket6' => 55000, // Harga untuk paket 6
+        'paket2' => 12000, // Harga untuk paket 2
+        'paket3' => 15000, // Harga untuk paket 3
+        'paket4' => 20000, // Harga untuk paket 4
+        'paket5' => 25000, // Harga untuk paket 5
+        'paket6' => 30000,
+        'paket8' => 3000,
+        'paket9' => 5000,
         'paket0' => 2000,  // Harga untuk paket 0
     ];
 
@@ -65,7 +69,25 @@ class Reminder extends Model
             
             // Menghitung total harga tambahan
             $totalTambahan = self::getTotalPriceFromTambahan($reminder->tambahan);
-            $reminder->total = $reminder->harga + $totalTambahan - $reminder->belum_bayar - $reminder->{'dompet_digital'}; // Total = harga + total_harga_tambahan - belum_bayar - dompet_digital
+
+            // Hitung total harga
+            $reminder->total = $reminder->harga + $totalTambahan;
+
+            // Hitung dompet digital
+            if ($reminder->{'dompet_digital'}) {
+                $reminder->{'dompet_digital'} = $reminder->harga + $totalTambahan; // Atau sesuai logika lain
+                $reminder->total -= $reminder->{'dompet_digital'}; // Kurangi total jika dana digital sudah diisi
+            } else {
+                $reminder->{'dompet_digital'} = 0; // Jika tidak dicentang, atur ke 0
+            }
+
+            // Hitung Hutang
+            if ($reminder->{'belum_bayar'}) {
+                $reminder->{'belum_bayar'} = $reminder->harga + $totalTambahan;
+                $reminder->total -= $reminder->{'belum_bayar'};
+            } else {
+                $reminder->{'belum_bayar'} = 0;
+            }
         });
     }
 
@@ -111,4 +133,6 @@ class Reminder extends Model
     {
         return implode(' + ', $this->tambahan); // Menggabungkan tambahan dengan tanda "+"
     }
+
+    
 }

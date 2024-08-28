@@ -12,6 +12,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Forms\Components\Checkbox;
 use Carbon\Carbon;
 
 class ReminderResource extends Resource
@@ -50,11 +51,13 @@ class ReminderResource extends Resource
                     ->label('Paket')
                     ->options([
                         'paket1' => 'Paket 1 - Rp10.000',
-                        'paket2' => 'Paket 2 - Rp20.000',
-                        'paket3' => 'Paket 3 - Rp30.000',
-                        'paket4' => 'Paket 4 - Rp35.000',
-                        'paket5' => 'Paket 5 - Rp40.000',
-                        'paket6' => 'Paket 6 - Rp55.000',
+                        'paket2' => 'Paket 2 - Rp12.000',
+                        'paket3' => 'Paket 3 - Rp15.000',
+                        'paket4' => 'Paket 4 - Rp20.000',
+                        'paket5' => 'Paket 5 - Rp25.000',
+                        'paket6' => 'Paket 6 - Rp30.000',
+                        'paket8' => 'Paket 8 - Rp3.000',
+                        'paket9' => 'Paket 9 - Rp5.000',
                         'paket0' => 'Paket 0 - Rp2.000',
                     ])
                     ->required()
@@ -74,13 +77,13 @@ class ReminderResource extends Resource
                     ->label('Tambahan')
                     ->options(self::getTambahanOptions()), // Menggunakan fungsi untuk mendapatkan opsi tambahan
 
-                TextInput::make('belum_bayar')
+                Checkbox::make('belum_bayar')
                     ->label('Belum Bayar')
-                    ->numeric(),
+                    ->default(false),
 
-                TextInput::make('dompet_digital')
+                Checkbox::make('dompet_digital')
                     ->label('Dompet Digital')
-                    ->numeric()
+                    ->default(false)
             ]);
     }
 
@@ -106,12 +109,14 @@ class ReminderResource extends Resource
     protected static function getDurationFromPackage($packageId): string
     {
         $durations = [
-            'paket1' => '1:00',
-            'paket2' => '2:20',
+            'paket1' => '2:20',
+            'paket2' => '3:00',
             'paket3' => '4:00',
-            'paket4' => '5:00',
-            'paket5' => '6:00',
-            'paket6' => '10:00',
+            'paket4' => '5:40',
+            'paket5' => '7:10',
+            'paket6' => '9:00',
+            'paket8' => '00:35',
+            'paket9' => '01:00',
             'paket0' => '00:02',
         ];
 
@@ -121,13 +126,15 @@ class ReminderResource extends Resource
     protected static function getPriceFromPackage($packageId): int
     {
         $prices = [
-            'paket1' => 10000,
-            'paket2' => 20000,
-            'paket3' => 30000,
-            'paket4' => 35000,
-            'paket5' => 40000,
-            'paket6' => 55000,
-            'paket0' => 2000,
+            'paket1' => 10000, // Harga untuk paket 1
+            'paket2' => 12000, // Harga untuk paket 2
+            'paket3' => 15000, // Harga untuk paket 3
+            'paket4' => 20000, // Harga untuk paket 4
+            'paket5' => 25000, // Harga untuk paket 5
+            'paket6' => 30000,
+            'paket8' => 3000,
+            'paket9' => 5000,
+            'paket0' => 2000, 
         ];
 
         return $prices[$packageId] ?? 0;
@@ -144,6 +151,7 @@ class ReminderResource extends Resource
                 TextColumn::make('waktu_selesai')->label('Waktu Selesai')->sortable(),
                 TextColumn::make('durasi')
                     ->label('Durasi/Jam')
+                    ->sortable()
                     ->getStateUsing(function (Reminder $record): string {
                         return self::calculateElapsedDuration($record);
                     })
@@ -170,27 +178,7 @@ class ReminderResource extends Resource
             ]);
     }
 
-    protected static function booted()
-    {
-        static::saving(function ($reminder) {
-            if (!$reminder->created_at) {
-                $reminder->created_at = now();
-            }
-
-            $reminder->waktu_selesai = self::calculateEndTime($reminder->waktu_mulai, $reminder->paket);
-            $reminder->durasi = self::$durations[$reminder->paket] ?? '0:00';
-            $reminder->harga = self::$prices[$reminder->paket] ?? 0; // Mengatur harga berdasarkan paket
-            
-            // Menghitung harga tambahan berdasarkan pilihan
-            $tambahan = explode(' ', $reminder->tambahan); // Memisahkan nama tambahan dan jumlah
-            $tambahanName = $tambahan[0]; // Nama tambahan
-            $tambahanQuantity = isset($tambahan[1]) ? (int)$tambahan[1] : 1; // Jumlah tambahan, default 1
-
-            // Menghitung harga tambahan
-            $hargaTambahan = self::getPriceFromTambahan($tambahanName, $tambahanQuantity);
-            $reminder->total = $reminder->harga + $hargaTambahan - $reminder->belum_bayar; // Total = harga + harga_tambahan - belum_bayar
-        });
-    }
+    
 
     protected static function getPriceFromTambahan($tambahanName, $quantity): int
     {
@@ -224,7 +212,15 @@ class ReminderResource extends Resource
             $duration = self::getDurationFromPackage($packageId);
             [$hours, $minutes] = explode(':', $duration);
 
-            return $startTime->copy()->addHours((int)$hours)->addMinutes((int)$minutes)->format(self::$timeFormat);
+            // Menghitung lintas tanggal
+            $endTime = $startTime->copy()->addHours((int)$hours)->addMinutes((int)$minutes);
+            
+            // Jika endTime lebih kecil dari startTime, berarti lintas tanggal
+            if ($endTime->isBefore($startTime)) {
+                $endTime->addDay();
+            }
+
+            return $endTime->format(self::$timeFormat);
         } catch (\Exception $e) {
             return 'Error';
         }
@@ -236,6 +232,11 @@ class ReminderResource extends Resource
         $startTime = Carbon::parse($reminder->waktu_mulai);
         $endTime = Carbon::parse($reminder->waktu_selesai);
         $createdAt = $reminder->created_at;
+
+        // Menangani lintas tanggal
+        if ($endTime->isBefore($startTime)) {
+            $endTime->addDay(); // Tambahkan satu hari jika endTime lebih kecil dari startTime
+        }
 
         if ($now > $endTime) {
             return self::formatDuration($startTime->diffInSeconds($endTime));
