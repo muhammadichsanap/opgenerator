@@ -21,7 +21,7 @@ class Reminder extends Model
         'harga',
         'tambahan',
         'belum_bayar',
-        'dompet digital',
+        'dompet_digital',
         'total',
     ];
 
@@ -29,35 +29,35 @@ class Reminder extends Model
         'created_at' => 'datetime',
         'waktu_mulai' => 'datetime',
         'waktu_selesai' => 'datetime',
-        'tambahan' => 'array', // Mengubah tambahan menjadi array
+        'tambahan' => 'array', // Convert 'tambahan' to an array
     ];
 
     protected static $durations = [
         'paket1' => '2:20',
-            'paket2' => '3:00',
-            'paket3' => '4:00',
-            'paket4' => '5:40',
-            'paket5' => '7:10',
-            'paket6' => '9:00',
-            'paket8' => '00:35',
-            'paket9' => '01:00',
-            'paket0' => '00:02',
-            'vip20k' => '3:00',
-            'vip30k' => '6:00',
+        'paket2' => '3:00',
+        'paket3' => '4:00',
+        'paket4' => '5:40',
+        'paket5' => '7:10',
+        'paket6' => '9:00',
+        'paket8' => '00:35',
+        'paket9' => '01:00',
+        'paket0' => '00:02',
+        'vip20k' => '3:00',
+        'vip30k' => '6:00',
     ];
 
     protected static $prices = [
-        'paket1' => 10000, // Harga untuk paket 1
-            'paket2' => 12000, // Harga untuk paket 2
-            'paket3' => 15000, // Harga untuk paket 3
-            'paket4' => 20000, // Harga untuk paket 4
-            'paket5' => 25000, // Harga untuk paket 5
-            'paket6' => 30000,
-            'paket8' => 3000,
-            'paket9' => 5000,
-            'paket0' => 2000, 
-            'vip20k' => 20000,
-            'vip30k' => 30000, // Harga untuk paket 0
+        'paket1' => 10000,
+        'paket2' => 12000,
+        'paket3' => 15000,
+        'paket4' => 20000,
+        'paket5' => 25000,
+        'paket6' => 30000,
+        'paket8' => 3000,
+        'paket9' => 5000,
+        'paket0' => 2000,
+        'vip20k' => 20000,
+        'vip30k' => 30000,
     ];
 
     protected static function booted()
@@ -69,54 +69,49 @@ class Reminder extends Model
 
             $reminder->waktu_selesai = self::calculateEndTime($reminder->waktu_mulai, $reminder->paket);
             $reminder->durasi = self::$durations[$reminder->paket] ?? '0:00';
-            $reminder->harga = self::$prices[$reminder->paket] ?? 0; // Mengatur harga berdasarkan paket
-            
-            // Menghitung total harga tambahan
-            $totalTambahan = self::getTotalPriceFromTambahan($reminder->tambahan);
+            $reminder->harga = self::$prices[$reminder->paket] ?? 0;
 
-            // Hitung total harga
+            // Ensure 'tambahan' is an array or empty array if null
+            $tambahanArray = is_array($reminder->tambahan) ? $reminder->tambahan : json_decode($reminder->tambahan, true);
+            $tambahanArray = $tambahanArray ?? []; // Set to empty array if null
+            $totalTambahan = self::getTotalPriceFromTambahan($tambahanArray);
+
+            // Calculate total price
             $reminder->total = $reminder->harga + $totalTambahan;
 
-            // Hitung dompet digital
-            if ($reminder->{'dompet_digital'}) {
-                $reminder->{'dompet_digital'} = $reminder->harga + $totalTambahan; // Atau sesuai logika lain
-                $reminder->total -= $reminder->{'dompet_digital'}; // Kurangi total jika dana digital sudah diisi
-            } else {
-                $reminder->{'dompet_digital'} = 0; // Jika tidak dicentang, atur ke 0
+            // Calculate digital wallet
+            if ($reminder->dompet_digital) {
+                $reminder->total -= $reminder->dompet_digital;
             }
 
-            // Hitung Hutang
-            if ($reminder->{'belum_bayar'}) {
-                $reminder->{'belum_bayar'} = $reminder->harga + $totalTambahan;
-                $reminder->total -= $reminder->{'belum_bayar'};
-            } else {
-                $reminder->{'belum_bayar'} = 0;
+            // Calculate outstanding balance
+            if ($reminder->belum_bayar) {
+                $reminder->total -= $reminder->belum_bayar;
             }
         });
     }
 
-    protected static function getTotalPriceFromTambahan($tambahan): int
+    protected static function getTotalPriceFromTambahan(array $tambahan): int
     {
         $tambahanPrices = [
-            'Minola' => 2000, // Rp2.000
-            'Golda/Milku/Abc' => 3500, // Rp3.500
-            'TehPucuk' => 4000, // Rp4.000
+            'Minola' => 2000,
+            'Golda/Milku/Abc' => 3500,
+            'TehPucuk' => 4000,
         ];
 
-        // Menghitung total harga dari tambahan yang diberikan
         $total = 0;
-        foreach ((array)$tambahan as $item) {
-            // Memisahkan nama tambahan dan jumlah
+        foreach ($tambahan as $item) {
+            // Split the item into name and quantity
             $parts = explode(' ', $item);
-            $tambahanName = $parts[0]; // Nama tambahan
-            $tambahanQuantity = isset($parts[1]) ? (int)$parts[1] : 1; // Jumlah tambahan, default 1
+            $tambahanName = $parts[0]; // Item name
+            $tambahanQuantity = isset($parts[1]) ? (int)$parts[1] : 1; // Quantity, default to 1
 
-            // Menghitung harga tambahan
+            // Calculate price
             if (array_key_exists($tambahanName, $tambahanPrices)) {
-                $total += $tambahanPrices[$tambahanName] * $tambahanQuantity; // Menambahkan harga jika tambahan ditemukan
+                $total += $tambahanPrices[$tambahanName] * $tambahanQuantity;
             }
         }
-        return $total; // Mengembalikan total harga
+        return $total;
     }
 
     protected static function calculateEndTime($startTime, $packageId)
@@ -135,8 +130,6 @@ class Reminder extends Model
 
     public function getFormattedTambahanAttribute()
     {
-        return implode(' + ', $this->tambahan); // Menggabungkan tambahan dengan tanda "+"
+        return implode(' + ', $this->tambahan);
     }
-
-    
 }

@@ -16,4 +16,25 @@ class ListReminders extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+    // Override the mount method without parameters
+    public function mount(): void
+    {
+        parent::mount();
+
+        // Apply default filters if not already set
+        $this->applyDefaultFilters();
+    }
+
+    protected function applyDefaultFilters(): void
+    {
+        $this->tableFilters = [
+            'today' => [
+                'isActive' => true,
+            ],
+            'completed' => [
+                'isActive' => false,
+            ],
+        ];
+    }
 }

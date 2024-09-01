@@ -40,8 +40,18 @@ class ReminderResource extends Resource
                     ->disabled()
                     ->format(self::$timeFormat)
                     ->withoutSeconds()
-                    ->afterStateHydrated(fn ($state, callable $set, callable $get) =>
-                        $set('waktu_selesai', self::calculateEndTime($get('waktu_mulai'), $get('paket')))),
+                    ->afterStateHydrated(fn ($state, callable $set, callable $get) => 
+                        $set('waktu_selesai', self::calculateEndTime($get('waktu_mulai'), $get('paket')))
+                    )
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        // Batasi waktu selesai tidak lebih dari 23:59
+                        $maxEndTime = Carbon::createFromFormat(self::$timeFormat, '23:59');
+                        $endTime = Carbon::createFromFormat(self::$timeFormat, $state);
+
+                        if ($endTime->greaterThan($maxEndTime)) {
+                            $set('waktu_selesai', $maxEndTime->format(self::$timeFormat));
+                        }
+                    }),
 
                 TextInput::make('no_pc')
                     ->label('Nomor PC')
@@ -64,8 +74,9 @@ class ReminderResource extends Resource
                     ])
                     ->required()
                     ->reactive()
-                    ->afterStateUpdated(fn ($state, callable $set, callable $get) =>
-                        $set('waktu_selesai', self::calculateEndTime($get('waktu_mulai'), $state))),
+                    ->afterStateUpdated(fn ($state, callable $set, callable $get) => 
+                        $set('waktu_selesai', self::calculateEndTime($get('waktu_mulai'), $state))
+                    ),
 
                 Select::make('kelas_pc')
                     ->label('Kelas PC')
@@ -77,7 +88,7 @@ class ReminderResource extends Resource
 
                 Select::make('tambahan')
                     ->label('Tambahan')
-                    ->options(self::getTambahanOptions()), // Menggunakan fungsi untuk mendapatkan opsi tambahan
+                    ->options(self::getTambahanOptions()),
 
                 Checkbox::make('belum_bayar')
                     ->label('Belum Bayar')
@@ -85,7 +96,7 @@ class ReminderResource extends Resource
 
                 Checkbox::make('dompet_digital')
                     ->label('Dompet Digital')
-                    ->default(false)
+                    ->default(false),
             ]);
     }
 
@@ -167,14 +178,30 @@ class ReminderResource extends Resource
                         'data-end-time' => $record->waktu_selesai,
                         'data-created-at' => $record->created_at->timestamp,
                     ]),
-                TextColumn::make('harga')->label('Harga'), // Tambahkan kolom harga
+                TextColumn::make('harga')->label('Harga'),
                 TextColumn::make('tambahan')->label('Tambahan'), 
-                TextColumn::make('belum_bayar')->label('Belum Bayar'), // Tambahkan kolom belum bayar
-                TextColumn::make('dompet_digital')->label('Dompet Digital'), // Tambahkan kolom dompet digital
-                TextColumn::make('total')->label('Total'), // Tambahkan kolom total
+                TextColumn::make('belum_bayar')->label('Belum Bayar'),
+                TextColumn::make('dompet_digital')->label('Dompet Digital'),
+                TextColumn::make('total')
+                    ->label('Total')
+                    ->getStateUsing(function (Reminder $record): int {
+                        $harga = self::getPriceFromPackage($record->paket);
+                        $tambahan = $record->tambahan ? array_sum(array_map(function ($item) {
+                            [$itemName, $quantity] = explode(' ', $item);
+                            return self::getPriceFromTambahan($itemName, (int) $quantity);
+                        }, explode(',', $record->tambahan))) : 0;
+
+                        return $harga + $tambahan;
+                    }),
             ])
             ->filters([
-                // Add filters if needed
+                Tables\Filters\Filter::make('today')
+                    ->label('Hari Ini')
+                    ->query(fn ($query) => $query->whereDate('created_at', Carbon::today())),
+                
+                Tables\Filters\Filter::make('completed')
+                    ->label('Sudah Selesai')
+                    ->query(fn ($query) => $query->where('waktu_selesai', '<=', Carbon::now()->format('H:i'))),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -183,8 +210,6 @@ class ReminderResource extends Resource
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
     }
-
-    
 
     protected static function getPriceFromTambahan($tambahanName, $quantity): int
     {
@@ -218,12 +243,13 @@ class ReminderResource extends Resource
             $duration = self::getDurationFromPackage($packageId);
             [$hours, $minutes] = explode(':', $duration);
 
-            // Menghitung lintas tanggal
+            // Menghitung waktu selesai
             $endTime = $startTime->copy()->addHours((int)$hours)->addMinutes((int)$minutes);
-            
-            // Jika endTime lebih kecil dari startTime, berarti lintas tanggal
-            if ($endTime->isBefore($startTime)) {
-                $endTime->addDay();
+
+            // Batasi waktu selesai tidak lebih dari 23:59
+            $maxEndTime = Carbon::createFromFormat(self::$timeFormat, '23:59');
+            if ($endTime->greaterThan($maxEndTime)) {
+                $endTime = $maxEndTime;
             }
 
             return $endTime->format(self::$timeFormat);
