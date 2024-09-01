@@ -28,7 +28,6 @@ class CreateRemindersTable extends Migration
             $table->integer('total')->default(0); // INT(10) NOT NULL DEFAULT '0'
             $table->timestamps(); // created_at & updated_at
 
-            $table->primary('id'); // PRIMARY KEY (`id`) USING BTREE
         });
     }
 

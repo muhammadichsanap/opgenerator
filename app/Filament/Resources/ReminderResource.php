@@ -121,7 +121,7 @@ class ReminderResource extends Resource
             'paket9' => '01:00',
             'paket0' => '00:02',
             'vip20k' => '3:00',
-            'vip30k' => '6:00,'
+            'vip30k' => '6:00',
         ];
 
         return $durations[$packageId] ?? '0:00';
