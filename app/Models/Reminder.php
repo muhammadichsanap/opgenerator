@@ -22,6 +22,7 @@ class Reminder extends Model
         'tambahan',
         'belum_bayar',
         'dompet_digital',
+        'waktu_dihentikan',
         'total',
     ];
 

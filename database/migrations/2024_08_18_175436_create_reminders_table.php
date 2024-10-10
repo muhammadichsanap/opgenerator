@@ -15,7 +15,7 @@ class CreateRemindersTable extends Migration
     {
         Schema::create('reminders', function (Blueprint $table) {
             $table->id(); // BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT
-            $table->time('waktu_mulai'); // TIME NOT NULL
+            $table->time('waktu_mulai')(); // TIME NOT NULL
             $table->time('waktu_selesai'); // TIME NOT NULL
             $table->time('durasi'); // TIME NOT NULL
             $table->string('no_pc')->default('')->collate('utf8mb4_unicode_ci'); // VARCHAR(255) NOT NULL DEFAULT ''
@@ -23,11 +23,10 @@ class CreateRemindersTable extends Migration
             $table->string('kelas_pc')->collate('utf8mb4_unicode_ci'); // VARCHAR(255) NOT NULL
             $table->integer('harga'); // INT(10) NOT NULL
             $table->string('tambahan')->nullable()->collate('utf8mb4_unicode_ci'); // VARCHAR(255) NULL DEFAULT NULL
-            $table->integer('belum_bayar')->default(0); // INT(10) NULL DEFAULT '0'
-            $table->integer('dompet_digital')->default(0); // INT(10) NULL DEFAULT '0'
+            $table->integer('belum_bayar')->nullable()->default(0); // INT(10) NULL DEFAULT '0'
+            $table->integer('dompet_digital')->nullable()->default(0); // INT(10) NULL DEFAULT '0'
             $table->integer('total')->default(0); // INT(10) NOT NULL DEFAULT '0'
             $table->timestamps(); // created_at & updated_at
-
         });
     }
 

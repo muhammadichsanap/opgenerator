@@ -86,17 +86,17 @@ class ReminderResource extends Resource
                     ])
                     ->required(),
 
-                Select::make('tambahan')
-                    ->label('Tambahan')
-                    ->options(self::getTambahanOptions()),
+                // Select::make('tambahan')
+                //     ->label('Tambahan')
+                //     ->options(self::getTambahanOptions()),
 
-                Checkbox::make('belum_bayar')
-                    ->label('Belum Bayar')
-                    ->default(false),
+                // Checkbox::make('belum_bayar')
+                //     ->label('Belum Bayar')
+                //     ->default(false),
 
-                Checkbox::make('dompet_digital')
-                    ->label('Dompet Digital')
-                    ->default(false),
+                // Checkbox::make('dompet_digital')
+                //     ->label('Dompet Digital')
+                //     ->default(false),
             ]);
     }
 
@@ -179,9 +179,9 @@ class ReminderResource extends Resource
                         'data-created-at' => $record->created_at->timestamp,
                     ]),
                 TextColumn::make('harga')->label('Harga'),
-                TextColumn::make('tambahan')->label('Tambahan'), 
-                TextColumn::make('belum_bayar')->label('Belum Bayar'),
-                TextColumn::make('dompet_digital')->label('Dompet Digital'),
+                // TextColumn::make('tambahan')->label('Tambahan'), 
+                // TextColumn::make('belum_bayar')->label('Belum Bayar'),
+                // TextColumn::make('dompet_digital')->label('Dompet Digital'),
                 TextColumn::make('total')
                     ->label('Total')
                     ->getStateUsing(function (Reminder $record): int {
@@ -270,6 +270,13 @@ class ReminderResource extends Resource
             $endTime->addDay(); // Tambahkan satu hari jika endTime lebih kecil dari startTime
         }
 
+        // Cek jika durasi sudah tercapai
+        if ($now >= $endTime) {
+            session()->flash('notification', 'Durasi telah tercapai!'); // Notifikasi durasi tercapai
+            session()->flash('warning', 'Peringatan: Waktu sudah selesai!'); // Notifikasi waktu sudah selesai
+        }   
+
+        // Jika waktu sudah selesai, kembalikan durasi
         if ($now > $endTime) {
             return self::formatDuration($startTime->diffInSeconds($endTime));
         }
